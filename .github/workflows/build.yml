@@ -1,0 +1,77 @@
+name: Build iSponsorBlock
+
+on:
+
+  push:
+
+    branches:
+
+      - main
+
+  workflow_dispatch:
+
+jobs:
+
+  build:
+
+    runs-on: macos-latest
+
+    steps:
+
+      - name: Checkout
+
+        uses: actions/checkout@v4
+
+        with:
+
+          submodules: recursive
+
+      - name: Setup Theos
+
+        run: |
+
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+
+          echo "PATH=$HOME/theos/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Setup SDKs
+
+        run: |
+
+          rm -rf $HOME/theos/sdks
+
+          git clone --depth 1 https://github.com/theos/sdks.git $HOME/theos/sdks
+
+      - name: Install dependencies
+
+        run: brew install ldid make xz
+
+      - name: Build
+
+        run: |
+
+          make clean || true
+
+          make package FINALPACKAGE=1
+
+      - name: Collect dylib + bundle
+
+        run: |
+
+          mkdir -p output
+
+          find .theos -name "*.dylib" -exec cp {} output/ \;
+
+          find .theos -name "*.bundle" -exec cp -R {} output/ \;
+
+      - name: Upload artifact
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: iSponsorBlock
+
+          path: output/
